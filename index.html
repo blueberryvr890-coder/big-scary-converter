@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big Scary RGB Converter</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    padding: 24px; font-family: Arial, sans-serif; color: #f5f5ff;
+    background: radial-gradient(circle at top, #29204d, #0b0b13 65%);
+  }
+  .app {
+    width: min(100%, 620px); padding: 28px; border: 1px solid #393451;
+    border-radius: 22px; background: #151421; box-shadow: 0 20px 70px #0008;
+  }
+  h1 { margin: 0 0 8px; font-size: clamp(25px, 5vw, 34px); }
+  .sub { color: #aaa7bd; margin: 0 0 24px; line-height: 1.5; }
+  .section { margin: 20px 0; }
+  label { display: block; margin-bottom: 8px; font-weight: 700; }
+  .inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .channel { min-width: 0; }
+  .channel label { font-size: 13px; color: #c9c5da; }
+  input {
+    width: 100%; padding: 13px 12px; border: 1px solid #49445f;
+    border-radius: 10px; background: #0d0c16; color: white;
+    font-size: 20px; outline: none;
+  }
+  input:focus { border-color: #a78bfa; box-shadow: 0 0 0 3px #a78bfa25; }
+  .hint { color: #9995aa; font-size: 12px; margin-top: 7px; }
+  .switch {
+    width: 100%; padding: 12px; border: 1px solid #51466f;
+    border-radius: 10px; background: #29213d; color: white;
+    font-weight: 700; cursor: pointer; font-size: 14px;
+  }
+  .switch:hover { background: #372b50; }
+  .preview {
+    height: 115px; border-radius: 14px; border: 1px solid #ffffff35;
+    background: rgb(0,0,0); margin: 14px 0;
+  }
+  .results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .result {
+    background: #0d0c16; border: 1px solid #302d40; border-radius: 12px;
+    padding: 14px; min-width: 0;
+  }
+  .result small { color: #aaa7bd; display: block; margin-bottom: 7px; }
+  .result strong { font-size: 19px; overflow-wrap: anywhere; }
+  .copy {
+    margin-top: 10px; padding: 7px 10px; border: 0; border-radius: 7px;
+    background: #6d50b5; color: white; cursor: pointer;
+  }
+  .error { color: #ff8c9b; min-height: 18px; font-size: 13px; margin-top: 8px; }
+  @media (max-width: 430px) {
+    .app { padding: 20px; }
+    .inputs { gap: 8px; }
+    input { font-size: 17px; padding: 12px 8px; }
+    .results { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>Big Scary RGB Converter</h1>
+  <p class="sub">Convert Big Scary color values (0–5) into normal RGB (0–255), and back.</p>
+
+  <div class="section">
+    <label id="inputTitle">Big Scary RGB</label>
+    <div class="inputs">
+      <div class="channel"><label for="red">Red</label><input id="red" type="number" min="0" max="5" step="1" value="5"></div>
+      <div class="channel"><label for="green">Green</label><input id="green" type="number" min="0" max="5" step="1" value="0"></div>
+      <div class="channel"><label for="blue">Blue</label><input id="blue" type="number" min="0" max="5" step="1" value="0"></div>
+    </div>
+    <div class="hint" id="hint">Enter a whole number from 0 to 5 for each color.</div>
+    <div class="error" id="error" aria-live="polite"></div>
+  </div>
+
+  <button class="switch" id="switchMode">Switch to RGB → Big Scary</button>
+  <div class="preview" id="preview"></div>
+
+  <div class="results">
+    <div class="result">
+      <small id="resultOneLabel">Normal RGB</small>
+      <strong id="resultOne">255, 0, 0</strong>
+      <button class="copy" data-copy="one">Copy</button>
+    </div>
+    <div class="result">
+      <small id="resultTwoLabel">Hex color</small>
+      <strong id="resultTwo">#FF0000</strong>
+      <button class="copy" data-copy="two">Copy</button>
+    </div>
+  </div>
+</main>
+<script>
+const fields = ['red', 'green', 'blue'].map(id => document.getElementById(id));
+const inputTitle = document.getElementById('inputTitle');
+const hint = document.getElementById('hint');
+const error = document.getElementById('error');
+const preview = document.getElementById('preview');
+const resultOneLabel = document.getElementById('resultOneLabel');
+const resultTwoLabel = document.getElementById('resultTwoLabel');
+const resultOne = document.getElementById('resultOne');
+const resultTwo = document.getElementById('resultTwo');
+const switchButton = document.getElementById('switchMode');
+let mode = 'big'; // big = Big Scary input, rgb = normal RGB input
+
+function update() {
+  const values = fields.map(field => field.value.trim());
+  const max = mode === 'big' ? 5 : 255;
+  const nums = values.map(Number);
+
+  if (values.some(v => v === '') || nums.some(n => !Number.isInteger(n) || n < 0 || n > max)) {
+    error.textContent = `Enter whole numbers from 0 to ${max}.`;
+    resultOne.textContent = '—';
+    resultTwo.textContent = '—';
+    preview.style.background = '#252333';
+    return;
+  }
+  error.textContent = '';
+
+  const rgb = mode === 'big'
+    ? nums.map(n => Math.round(n * 255 / 5))
+    : nums;
+  const big = mode === 'big'
+    ? nums
+    : nums.map(n => Math.round(n * 5 / 255));
+
+  const hex = '#' + rgb.map(n => n.toString(16).padStart(2, '0')).join('').toUpperCase();
+  preview.style.background = `rgb(${rgb.join(',')})`;
+  resultOne.textContent = mode === 'big' ? rgb.join(', ') : big.join(', ');
+  resultTwo.textContent = hex;
+  resultOneLabel.textContent = mode === 'big' ? 'Normal RGB' : 'Big Scary RGB';
+  resultTwoLabel.textContent = 'Hex color';
+}
+
+switchButton.addEventListener('click', () => {
+  mode = mode === 'big' ? 'rgb' : 'big';
+  inputTitle.textContent = mode === 'big' ? 'Big Scary RGB' : 'Normal RGB';
+  hint.textContent = mode === 'big'
+    ? 'Enter a whole number from 0 to 5 for each color.'
+    : 'Enter a whole number from 0 to 255 for each color.';
+  fields.forEach(field => {
+    field.max = mode === 'big' ? 5 : 255;
+    field.value = mode === 'big' ? 0 : 0;
+  });
+  switchButton.textContent = mode === 'big'
+    ? 'Switch to RGB → Big Scary'
+    : 'Switch to Big Scary → RGB';
+  update();
+});
+fields.forEach(field => field.addEventListener('input', update));
+
+document.querySelectorAll('.copy').forEach(button => {
+  button.addEventListener('click', async () => {
+    const value = button.dataset.copy === 'one' ? resultOne.textContent : resultTwo.textContent;
+    if (value === '—') return;
+    try {
+      await navigator.clipboard.writeText(value);
+      button.textContent = 'Copied!';
+      setTimeout(() => button.textContent = 'Copy', 1000);
+    } catch {
+      button.textContent = 'Copy manually';
+    }
+  });
+});
+update();
+</script>
+</body>
+</html>
